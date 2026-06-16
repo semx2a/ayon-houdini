@@ -1,30 +1,34 @@
 # -*- coding: utf-8 -*-
 import hou
 
-from ayon_houdini.api import (
-    pipeline,
-    plugin,
-    lib
-)
+from ayon_houdini.api import pipeline, plugin, lib
 
 
 class BgeoLoader(plugin.HoudiniLoader):
     """Load bgeo files to Houdini."""
 
     label = "Load bgeo"
-    product_base_types = {"model", "pointcache", "bgeo"}
+    product_base_types = {"model", "pointcache", "bgeo", "rig"}
     product_types = product_base_types
     representations = {"*"}
     extensions = {
-        "bgeo", "bgeosc", "bgeogz",
-        "bgeo.sc", "bgeo.gz", "bgeo.lzma", "bgeo.bz2"}
+        "bgeo",
+        "bgeosc",
+        "bgeogz",
+        "bgeo.sc",
+        "bgeo.gz",
+        "bgeo.lzma",
+        "bgeo.bz2",
+    }
     order = -10
     icon = "code-fork"
     color = "orange"
 
-    def load(self, context, name=None, namespace=None, data=None):
+    def load(self, context, name=None, namespace=None, options=None):
         # Get the root node
         obj = hou.node("/obj")
+        if obj is None:
+            raise RuntimeError("Could not find /obj node in Houdini session")
 
         # Define node name
         namespace = namespace if namespace else context["folder"]["name"]
@@ -41,8 +45,7 @@ class BgeoLoader(plugin.HoudiniLoader):
 
         # Explicitly create a file node
         file_node = container.createNode("file", node_name=node_name)
-        file_node.setParms(
-            {"file": self.format_path(context)})
+        file_node.setParms({"file": self.format_path(context)})
 
         # Set display on last node
         file_node.setDisplayFlag(True)
@@ -90,11 +93,15 @@ class BgeoLoader(plugin.HoudiniLoader):
         Workfile Template Builder system."""
         # Create node
         network = lib.find_active_network(
-            category=hou.sopNodeTypeCategory(),
-            default="/obj/geo1"
+            category=hou.sopNodeTypeCategory(), default="/obj/geo1"
         )
         if not network:
-            network = hou.node("/obj").createNode("geo", "geo1")
+            obj = hou.node("/obj")
+            if obj is None:
+                raise RuntimeError(
+                    "Could not find /obj node in Houdini session"
+                )
+            network = obj.createNode("geo", "geo1")
         node = network.createNode("null", node_name=node_name)
         node.moveToGoodPosition()
         return node
