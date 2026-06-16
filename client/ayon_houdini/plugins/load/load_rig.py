@@ -1,6 +1,3 @@
-import os
-import re
-
 import hou
 
 from ayon_houdini.api import pipeline, plugin
@@ -38,11 +35,8 @@ class RigLoader(plugin.HoudiniLoader):
         if file_node:
             file_node.destroy()
 
-        path = self.filepath_from_context(context)
         file_node = container.createNode("file", node_name=node_name)
-        file_node.setParms(
-            {"file": self.format_path(path, context["representation"])}
-        )
+        file_node.setParms({"file": self.format_path(context)})
 
         file_node.setDisplayFlag(True)
 
@@ -58,19 +52,6 @@ class RigLoader(plugin.HoudiniLoader):
             suffix="",
         )
 
-    @staticmethod
-    def format_path(path, representation):
-        """Format file path for single bgeo or bgeo sequence."""
-        is_sequence = bool(representation["context"].get("frame"))
-        if is_sequence:
-            folder, filename = os.path.split(path)
-            filename = re.sub(
-                r"(.*)\.(\d+)\.(bgeo.*)", "\\1.$F4.\\3", filename
-            )
-            path = os.path.join(folder, filename)
-
-        return os.path.normpath(path).replace("\\", "/")
-
     def update(self, container, context):
         repre_entity = context["representation"]
         node = container["node"]
@@ -82,8 +63,7 @@ class RigLoader(plugin.HoudiniLoader):
             self.log.error("Could not find node of type `file`")
             return
 
-        file_path = self.filepath_from_context(context)
-        file_node.setParms({"file": self.format_path(file_path, repre_entity)})
+        file_node.setParms({"file": self.format_path(context)})
 
         node.setParms({"representation": repre_entity["id"]})
 
